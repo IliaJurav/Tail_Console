@@ -28,7 +28,7 @@ class Tail {
     private var typeElem = 0
 
     // разбор параметров
-    fun parse(param: List<String>): Boolean {
+    fun parse(param: List<String>) {
         var i = 0
         while (i < param.size) {
             when (param[i]) {
@@ -59,7 +59,6 @@ class Tail {
             i++
         }
         if (typeElem == 0) typeElem = 2
-        return true
     }
 
     // исполнение
