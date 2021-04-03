@@ -65,19 +65,19 @@ class Tail {
     fun worker(): List<String> {
         val rez = mutableListOf<String>()
         if (listInputFiles.size == 0) {
-            println("Enter text, end of input is an empty line:")
+            println("Tail: Enter text, end of input is an empty line:")
             val inChars = mutableListOf<String>()
             do {
                 val s = readLine()
                 if (s == null || s == "") break
                 inChars.add(s)
             } while (true)
-            println("Ввод окончен.")
+            println("Tail: Text entry finished.")
             if (typeElem == 2) extractLines(inChars, rez, countElem)
             else extractChars(inChars.joinToString("\n"), rez, countElem)
         } else {
             for (i in 0 until listInputFiles.size) {
-                if (listInputFiles.size > 1) rez.add(listInputFiles[i].padStart(40,'*').padEnd(79,'*'))
+                if (listInputFiles.size > 1) rez.add(listInputFiles[i].padStart(40, '*').padEnd(79, '*'))
                 if (typeElem == 2) extractLines(File(listInputFiles[i]).readLines(), rez, countElem)
                 else extractChars(File(listInputFiles[i]).readText(), rez, countElem)
             }
@@ -89,14 +89,14 @@ class Tail {
     fun putResult(lst: List<String>) {
         if (outFileName != "") {
             File(outFileName).bufferedWriter().use { file ->
-                lst.forEachIndexed{ ind, s ->
+                lst.forEachIndexed { ind, s ->
                     file.write(s)
-                    if (ind<lst.lastIndex)file.newLine()
+                    if (ind < lst.lastIndex) file.newLine()
                 }
             }
         } else {
             for (s in lst)
-                System.out.println(s)
+                println(s)
         }
 
     }
