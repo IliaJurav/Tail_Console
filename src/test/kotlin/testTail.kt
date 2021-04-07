@@ -25,13 +25,14 @@ class Tests {
 
         // проверка ошибок
         // использование -c и -n одновременно
-        assertThrows(IllegalArgumentException::class.java) {
             main(arrayOf("-c", "50", "-n", "20", "input/file2.txt"))
-        }
+
         // несуществующий входной файл
-        assertThrows(IllegalArgumentException::class.java) {
             main(arrayOf("input/file22.txt"))
-        }
+
+        // использование двух выходных файлов
+            main(arrayOf("-o", "output/rez22.txt","-o" ,"output/rez23.txt"))
+            main(arrayOf("-o", "output/rez22.txt","-c"))
     }
 
 }

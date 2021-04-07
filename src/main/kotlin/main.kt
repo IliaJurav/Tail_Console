@@ -1,4 +1,5 @@
 import java.io.File
+import java.util.*
 
 /**
  * Вариант 9 -- tail
@@ -19,66 +20,77 @@ import java.io.File
  * В случае, когда какое-нибудь из имён файлов неверно или указаны одновременно флаги -c и -n, следует выдать ошибку.
  * Если ни один из этих флагов не указан, следует вывести последние 10 строк.
  * Кроме самой программы, следует написать автоматические тесты к ней.
+ *
+ *
+ * +1 Не очень хорошо хранить typeElem как целое число, так как непонятно, какое число за какой тип отвечает.
+ * В идеале, нужно завести enum, но сгодится и Boolean (но тогда обязательно нужно переименовать typeElem так,
+ * чтобы было очевидно, какой тип true, а какой - false).
+ * +2 На консоль не следует выводить никаких лишних надписей, например, приглашения ввода.
+ * И чтение из консоли должно так же заканчиваться по "концу файла", а не по пустой строке.
+ * +3 Классическое (POSIX) определение текстового файла - набор строк, где строка - набор символов,
+ * оканчивающийся символом конца строки. То есть даже в конце последней строки принято ставить "перенос строки",
+ * поэтому не нужно специально прикладывать усилия, чтобы его не поставить.
+ * +4 Не следует выбрасывать ожидаемые исключения из main. Согласитесь, пользователю будет проще понять,
+ * что случилось, если вывести ему понятный текст ошибки, а не вываливать на него стек вызовов.
  */
 
 class Tail {
+    enum class TypeElem {NONE, CHARS, LINES}
     private val listInputFiles = mutableListOf<String>()
     private var countElem = 10
     private var outFileName = ""
-    private var typeElem = 0
+    private var typeElem = TypeElem.NONE
 
     // разбор параметров
-    fun parse(param: List<String>) {
+    fun parse(param: List<String>): String {
         var i = 0
         while (i < param.size) {
             when (param[i]) {
                 "-o" -> {
-                    i++
-                    if (outFileName != "") throw IllegalArgumentException("There can be only one output file")
+                    if (++i == param.size) return "Error, missing parameter."
+                    if (outFileName != "") return "Error, there can be no more one output file."
                     outFileName = param[i]
                 }
                 "-c" -> {
-                    i++
-                    if (typeElem != 0)
-                        throw IllegalArgumentException("Error in specifying the -n and -c parameters.")
+                    if (++i == param.size) return "Error, missing parameter."
+                    if (typeElem != TypeElem.NONE) return "Error in specifying the -n and -c parameters."
+
                     countElem = param[i].toInt()
-                    typeElem = 1
+                    typeElem = TypeElem.CHARS
                 }
                 "-n" -> {
-                    i++
-                    if (typeElem != 0) throw IllegalArgumentException("Error in specifying the -n and -c parameters.")
+                    if (++i == param.size) return "Error, missing parameter."
+                    if (typeElem != TypeElem.NONE) return "Error in specifying the -n and -c parameters."
                     countElem = param[i].toInt()
-                    typeElem = 2
+                    typeElem = TypeElem.LINES
                 }
                 else -> {
-                    if (!File(param[i]).exists())
-                        throw IllegalArgumentException("Input file '${param[i]}' not found.")
+                    if (!File(param[i]).exists()) return "Error, input file '${param[i]}' not found."
                     listInputFiles.add(param[i])
                 }
             }
             i++
         }
-        if (typeElem == 0) typeElem = 2
+        if (typeElem == TypeElem.NONE) typeElem = TypeElem.LINES
+        return ""
     }
+
 
     // исполнение
     fun worker(): List<String> {
         val rez = mutableListOf<String>()
         if (listInputFiles.size == 0) {
-            println("Tail: Enter text, end of input is an empty line:")
             val inChars = mutableListOf<String>()
             do {
-                val s = readLine()
-                if (s == null || s == "") break
+                val s = readLine() ?: break
                 inChars.add(s)
             } while (true)
-            println("Tail: Text entry finished.")
-            if (typeElem == 2) extractLines(inChars, rez, countElem)
+            if (typeElem == TypeElem.LINES) extractLines(inChars, rez, countElem)
             else extractChars(inChars.joinToString("\n"), rez, countElem)
         } else {
             for (i in 0 until listInputFiles.size) {
                 if (listInputFiles.size > 1) rez.add(listInputFiles[i].padStart(40, '*').padEnd(79, '*'))
-                if (typeElem == 2) extractLines(File(listInputFiles[i]).readLines(), rez, countElem)
+                if (typeElem == TypeElem.LINES) extractLines(File(listInputFiles[i]).readLines(), rez, countElem)
                 else extractChars(File(listInputFiles[i]).readText(), rez, countElem)
             }
         }
@@ -91,7 +103,7 @@ class Tail {
             File(outFileName).bufferedWriter().use { file ->
                 lst.forEachIndexed { ind, s ->
                     file.write(s)
-                    if (ind < lst.lastIndex) file.newLine()
+                    file.newLine()
                 }
             }
         } else {
@@ -128,7 +140,8 @@ class Tail {
 fun main(args: Array<String>) {
     val tail = Tail()
     with(tail) {
-        parse(args.toList())
-        putResult(worker())
+        val s = parse(args.toList())
+        if (s != "") println(s)
+        else putResult(worker())
     }
 }
