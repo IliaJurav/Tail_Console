@@ -1,5 +1,6 @@
 import java.io.File
 import java.util.*
+import kotlin.system.exitProcess
 
 /**
  * Вариант 9 -- tail
@@ -20,59 +21,47 @@ import java.util.*
  * В случае, когда какое-нибудь из имён файлов неверно или указаны одновременно флаги -c и -n, следует выдать ошибку.
  * Если ни один из этих флагов не указан, следует вывести последние 10 строк.
  * Кроме самой программы, следует написать автоматические тесты к ней.
- *
- *
- * +1 Не очень хорошо хранить typeElem как целое число, так как непонятно, какое число за какой тип отвечает.
- * В идеале, нужно завести enum, но сгодится и Boolean (но тогда обязательно нужно переименовать typeElem так,
- * чтобы было очевидно, какой тип true, а какой - false).
- * +2 На консоль не следует выводить никаких лишних надписей, например, приглашения ввода.
- * И чтение из консоли должно так же заканчиваться по "концу файла", а не по пустой строке.
- * +3 Классическое (POSIX) определение текстового файла - набор строк, где строка - набор символов,
- * оканчивающийся символом конца строки. То есть даже в конце последней строки принято ставить "перенос строки",
- * поэтому не нужно специально прикладывать усилия, чтобы его не поставить.
- * +4 Не следует выбрасывать ожидаемые исключения из main. Согласитесь, пользователю будет проще понять,
- * что случилось, если вывести ему понятный текст ошибки, а не вываливать на него стек вызовов.
- */
+ **/
 
 class Tail {
-    enum class TypeElem {NONE, CHARS, LINES}
+    enum class TypeElem { NONE, CHARS, LINES }
+
     private val listInputFiles = mutableListOf<String>()
     private var countElem = 10
     private var outFileName = ""
     private var typeElem = TypeElem.NONE
 
     // разбор параметров
-    fun parse(param: List<String>): String {
+    fun parse(param: List<String>) {
         var i = 0
         while (i < param.size) {
             when (param[i]) {
                 "-o" -> {
-                    if (++i == param.size) return "Error, missing parameter."
-                    if (outFileName != "") return "Error, there can be no more one output file."
+                    if (++i == param.size) throw IllegalArgumentException("Error, missing parameter.")
+                    if (outFileName != "") throw IllegalArgumentException("Error, there can be no more one output file.")
                     outFileName = param[i]
                 }
                 "-c" -> {
-                    if (++i == param.size) return "Error, missing parameter."
-                    if (typeElem != TypeElem.NONE) return "Error in specifying the -n and -c parameters."
-
+                    if (++i == param.size) throw IllegalArgumentException("Error, missing parameter.")
+                    if (typeElem != TypeElem.NONE) throw IllegalArgumentException("Error in specifying the -n and -c parameters.")
                     countElem = param[i].toInt()
                     typeElem = TypeElem.CHARS
                 }
                 "-n" -> {
-                    if (++i == param.size) return "Error, missing parameter."
-                    if (typeElem != TypeElem.NONE) return "Error in specifying the -n and -c parameters."
+                    if (++i == param.size) throw IllegalArgumentException("Error, missing parameter.")
+                    if (typeElem != TypeElem.NONE) throw IllegalArgumentException("Error in specifying the -n and -c parameters.")
                     countElem = param[i].toInt()
                     typeElem = TypeElem.LINES
                 }
                 else -> {
-                    if (!File(param[i]).exists()) return "Error, input file '${param[i]}' not found."
+                    if (!File(param[i]).exists()) throw IllegalArgumentException("Error, input file '${param[i]}' not found.")
                     listInputFiles.add(param[i])
                 }
             }
             i++
         }
+        if (countElem < 1) throw IllegalArgumentException("Error in specifying the quantity in the -n and -c options.")
         if (typeElem == TypeElem.NONE) typeElem = TypeElem.LINES
-        return ""
     }
 
 
@@ -85,13 +74,13 @@ class Tail {
                 val s = readLine() ?: break
                 inChars.add(s)
             } while (true)
-            if (typeElem == TypeElem.LINES) extractLines(inChars, rez, countElem)
-            else extractChars(inChars.joinToString("\n"), rez, countElem)
+            if (typeElem == TypeElem.LINES) extractLines(inChars, rez)
+            else extractChars(inChars.joinToString("\n"), rez)
         } else {
             for (i in 0 until listInputFiles.size) {
                 if (listInputFiles.size > 1) rez.add(listInputFiles[i].padStart(40, '*').padEnd(79, '*'))
-                if (typeElem == TypeElem.LINES) extractLines(File(listInputFiles[i]).readLines(), rez, countElem)
-                else extractChars(File(listInputFiles[i]).readText(), rez, countElem)
+                if (typeElem == TypeElem.LINES) extractLines(File(listInputFiles[i]).readLines(), rez)
+                else extractChars(File(listInputFiles[i]).readText(), rez)
             }
         }
         return rez
@@ -116,8 +105,8 @@ class Tail {
     /**
      * Вывести последние count строк
      */
-    private fun extractLines(txt: List<String>, out: MutableList<String>, count: Int): Boolean {
-        val st = if (count < txt.count()) txt.lastIndex - count + 1 else 0
+    private fun extractLines(txt: List<String>, out: MutableList<String>): Boolean {
+        val st = if (countElem < txt.count()) txt.lastIndex - countElem + 1 else 0
         for (i in st..txt.lastIndex)
             out.add(txt[i])
         return true
@@ -126,8 +115,8 @@ class Tail {
     /**
      * Вывести последние count символов
      */
-    private fun extractChars(txt: String, out: MutableList<String>, count: Int): Boolean {
-        val st = if (count < txt.count()) txt.lastIndex - count + 1 else 0
+    private fun extractChars(txt: String, out: MutableList<String>): Boolean {
+        val st = if (countElem < txt.count()) txt.lastIndex - countElem + 1 else 0
         out.add(txt.substring(st..txt.lastIndex))
         return true
     }
@@ -139,9 +128,13 @@ class Tail {
  */
 fun main(args: Array<String>) {
     val tail = Tail()
-    with(tail) {
-        val s = parse(args.toList())
-        if (s != "") println(s)
-        else putResult(worker())
+    try {
+        with(tail) {
+            parse(args.toList())
+            putResult(worker())
+        }
+    } catch (e: Exception) {
+        println(e.message)
+        exitProcess(1)
     }
 }
